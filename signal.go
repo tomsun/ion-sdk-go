@@ -191,6 +191,29 @@ func (s *Signal) Trickle(candidate *webrtc.ICECandidate, target int) {
 	}
 }
 
+func (s *Signal) TrickleFromInit(candidate webrtc.ICECandidateInit, target int) {
+	log.Infof("[%v] [Signal.Trickle] candidate=%v target=%v", s.id, candidate, target)
+	bytes, err := json.Marshal(candidate)
+	if err != nil {
+		log.Errorf("err=%v", err)
+		return
+	}
+	go s.onSignalHandleOnce()
+	s.Lock()
+	err = s.stream.Send(&pb.SignalRequest{
+		Payload: &pb.SignalRequest_Trickle{
+			Trickle: &pb.Trickle{
+				Init:   string(bytes),
+				Target: pb.Trickle_Target(target),
+			},
+		},
+	})
+	s.Unlock()
+	if err != nil {
+		log.Errorf("[%v] err=%v", s.id, err)
+	}
+}
+
 func (s *Signal) Offer(sdp webrtc.SessionDescription) {
 	log.Infof("[%v] [Signal.Offer] sdp=%v", s.id, sdp)
 	marshalled, err := json.Marshal(sdp)
